@@ -205,6 +205,103 @@ body {
 }
 
 /* ─── TAB 1: CHAT & VOZ ─── */
+.avatar-hero-card {
+  background: linear-gradient(145deg, rgba(23, 20, 39, 0.85), rgba(16, 14, 29, 0.95));
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-card);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(20px);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 2px;
+}
+
+.avatar-hero-glow {
+  position: absolute;
+  top: -20px;
+  left: 20px;
+  width: 90px;
+  height: 90px;
+  background: radial-gradient(circle, var(--purple-glow) 0%, transparent 70%);
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+.avatar-hero-container {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-hero-img {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--purple-bright);
+  box-shadow: 0 0 18px var(--purple-glow);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease;
+  animation: avatarFloat 4s ease-in-out infinite alternate;
+}
+
+.avatar-hero-img.speaking {
+  border-color: var(--pink-accent);
+  box-shadow: 0 0 25px var(--pink-glow);
+  animation: avatarTalk 0.5s infinite alternate;
+}
+
+@keyframes avatarFloat {
+  0% { transform: translateY(0px) scale(1); }
+  100% { transform: translateY(-3px) scale(1.02); }
+}
+
+@keyframes avatarTalk {
+  0% { transform: scale(0.98); }
+  100% { transform: scale(1.05); }
+}
+
+.hero-emotion-pill {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  background: rgba(13, 11, 23, 0.9);
+  border: 1px solid var(--purple-bright);
+  color: var(--purple-bright);
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+
+.avatar-hero-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hero-name {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.hero-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
 .live-thought-card {
   background: var(--bg-card);
   border: 1px solid var(--border-glass);

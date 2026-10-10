@@ -154,8 +154,20 @@ function handleWsMessage(data) {
 function updateLiveThought(text, emotion = 'happy') {
   const elText = document.getElementById('liveThoughtText');
   const elTag = document.getElementById('currentEmotionTag');
+  const heroPill = document.getElementById('heroEmotionPill');
+  const heroAvatar = document.getElementById('heroAvatar');
+
   if (elText && text) elText.textContent = text;
   if (elTag && emotion) elTag.textContent = `[${emotion}]`;
+  if (heroPill && emotion) heroPill.textContent = `✦ ${emotion.toUpperCase()}`;
+
+  // Efecto visual de reactividad en el avatar del celular
+  if (heroAvatar) {
+    heroAvatar.classList.add('speaking');
+    setTimeout(() => {
+      heroAvatar.classList.remove('speaking');
+    }, 3500);
+  }
 }
 
 // ─── RECONOCIMIENTO DE VOZ ───
@@ -270,6 +282,8 @@ function initVoice() {
 function playTtsMobile(text) {
   if (!text) return;
 
+  const heroAvatar = document.getElementById('heroAvatar');
+
   if (state.currentAudio) {
     state.currentAudio.pause();
     state.currentAudio = null;
@@ -278,11 +292,24 @@ function playTtsMobile(text) {
   const url = `/api/tts?text=${encodeURIComponent(text)}`;
   const audio = new Audio(url);
   state.currentAudio = audio;
+
+  audio.onplay = () => {
+    if (heroAvatar) heroAvatar.classList.add('speaking');
+  };
+  audio.onended = () => {
+    if (heroAvatar) heroAvatar.classList.remove('speaking');
+  };
+  audio.onerror = () => {
+    if (heroAvatar) heroAvatar.classList.remove('speaking');
+  };
+
   audio.play().catch(e => {
     // Si el navegador bloquea autoplay, usar síntesis nativa
     if ('speechSynthesis' in window) {
       const utter = new SpeechSynthesisUtterance(text);
       utter.lang = 'es-LA';
+      utter.onstart = () => { if (heroAvatar) heroAvatar.classList.add('speaking'); };
+      utter.onend = () => { if (heroAvatar) heroAvatar.classList.remove('speaking'); };
       window.speechSynthesis.speak(utter);
     }
   });

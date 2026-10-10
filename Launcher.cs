@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -18,7 +18,7 @@ namespace YizeLauncher
 
             try
             {
-                Console.Title = "âœ¦ Yize 3D â€” Asistente Virtual y Copiloto âœ¦";
+                Console.Title = "Yize 3D - Asistente Virtual y Copiloto de Escritorio";
             }
             catch { }
 
@@ -27,23 +27,23 @@ namespace YizeLauncher
 
             Console.ForegroundColor = ConsoleColor.Magenta;
             Console.WriteLine("======================================================================");
-            Console.WriteLine("         âœ¦  YIZE 3D â€” ASISTENTE VIRTUAL Y VTUBER DE ESCRITORIO  âœ¦      ");
+            Console.WriteLine("         [YIZE 3D] ASISTENTE VIRTUAL Y VTUBER DE ESCRITORIO           ");
             Console.WriteLine("======================================================================");
             Console.ResetColor();
             Console.WriteLine();
 
-            // 1. Iniciar Overlay 3D si no estÃ¡ abierto
+            // 1. Iniciar Overlay 3D si no está abierto
             EnsureOverlayRunning(baseDir);
 
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine("======================================================================");
-            Console.WriteLine("  Â¿CÃ³mo prefieres interactuar con Yize?");
+            Console.WriteLine("  Como prefieres interactuar con Yize?");
             Console.WriteLine();
-            Console.WriteLine("  [1] Modo Texto / Consola (Escribir en teclado â€” Recomendado)");
-            Console.WriteLine("  [2] Modo Voz (Hablarle por micrÃ³fono continuamente)");
-            Console.WriteLine("  [3] Servidor MÃ³vil (Controlar desde tu celular con cÃ³digo QR)");
-            Console.WriteLine("  [4] Iniciar Todo (Asistente en PC + Servidor MÃ³vil para Celular)");
+            Console.WriteLine("  [1] Modo Texto / Consola (Escribir en teclado - Recomendado)");
+            Console.WriteLine("  [2] Modo Voz (Hablarle por microfono continuamente)");
+            Console.WriteLine("  [3] Servidor Movil (Controlar desde tu celular con codigo QR)");
+            Console.WriteLine("  [4] Iniciar Todo (Asistente en PC + Servidor Movil para Celular)");
             Console.WriteLine("======================================================================");
             Console.ResetColor();
             Console.WriteLine();
@@ -65,7 +65,7 @@ namespace YizeLauncher
                 if (opcion == "4")
                 {
                     Console.ForegroundColor = ConsoleColor.Magenta;
-                    Console.WriteLine("[*] Iniciando Servidor MÃ³vil en segundo plano...");
+                    Console.WriteLine("[*] Iniciando Servidor Movil en segundo plano...");
                     Console.ResetColor();
 
                     ProcessStartInfo srvInfo = new ProcessStartInfo
@@ -81,7 +81,7 @@ namespace YizeLauncher
 
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine("======================================================================");
-                    Console.WriteLine("  INICIANDO MODO TEXTO EN PC â€” Escribe tus preguntas u Ã³rdenes");
+                    Console.WriteLine("  INICIANDO MODO TEXTO EN PC - Escribe tus preguntas u ordenes");
                     Console.WriteLine("======================================================================");
                     Console.ResetColor();
 
@@ -91,7 +91,7 @@ namespace YizeLauncher
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine("======================================================================");
-                    Console.WriteLine("  INICIANDO SERVIDOR MÃ“VIL â€” Escanea el QR con tu telÃ©fono");
+                    Console.WriteLine("  INICIANDO SERVIDOR MOVIL - Escanea el QR con tu telefono");
                     Console.WriteLine("======================================================================");
                     Console.ResetColor();
 
@@ -101,7 +101,7 @@ namespace YizeLauncher
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine("======================================================================");
-                    Console.WriteLine("  INICIANDO MODO VOZ â€” HÃ¡blale por micrÃ³fono a Yize");
+                    Console.WriteLine("  INICIANDO MODO VOZ - Hablale por microfono a Yize");
                     Console.WriteLine("======================================================================");
                     Console.ResetColor();
 
@@ -111,7 +111,7 @@ namespace YizeLauncher
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine("======================================================================");
-                    Console.WriteLine("  INICIANDO MODO TEXTO â€” Escribe tus preguntas u Ã³rdenes");
+                    Console.WriteLine("  INICIANDO MODO TEXTO - Escribe tus preguntas u ordenes");
                     Console.WriteLine("======================================================================");
                     Console.ResetColor();
 
@@ -147,7 +147,7 @@ namespace YizeLauncher
                 if (procs.Length > 0)
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("[âœ“] Yize 3D Overlay ya estÃ¡ activa en tu escritorio.");
+                    Console.WriteLine("[OK] Yize 3D Overlay ya esta activa en tu escritorio.");
                     Console.ResetColor();
                     return;
                 }
@@ -172,13 +172,13 @@ namespace YizeLauncher
                     Thread.Sleep(1500);
 
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("[âœ“] Yize 3D cargada correctamente.");
+                    Console.WriteLine("[OK] Yize 3D cargada correctamente.");
                     Console.ResetColor();
                 }
                 else
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine("[~] Overlay no encontrado en yize_overlay. Se iniciarÃ¡ en modo consola.");
+                    Console.WriteLine("[~] Overlay no encontrado en yize_overlay. Se iniciara en modo consola.");
                     Console.ResetColor();
                 }
             }
