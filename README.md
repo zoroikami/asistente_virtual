@@ -111,14 +111,15 @@ asistente_virtual/
 
 ## 📚 Documentación Adicional
 
-* 🏗️ **[Arquitectura y Flujo Técnico](file:///c:/Users/kj/Desktop/asistente_virtual/ARQUITECTURA.md)**: Diagramas Mermaid, capas del sistema y comunicación WebSocket.
-* 📱 **[Manual de la App Móvil](file:///c:/Users/kj/Desktop/asistente_virtual/MANUAL_APP_MOVIL.md)**: Guía paso a paso para instalar la PWA en tu celular e interactuar fuera de casa vía 4G/5G.
+* 🏗️ **[Arquitectura y Flujo Técnico]**: Diagramas Mermaid, capas del sistema y comunicación WebSocket.
+* 📱 **[Manual de la App Móvil]**: Guía paso a paso para instalar la PWA en tu celular e interactuar fuera de casa vía 4G/5G.
 
 ---
 
 ## 🔑 Configuración de Inteligencia Artificial (Google Gemini)
 
 Yize puede ejecutar comandos nativos del sistema localmente sin internet. Para activar su razonamiento completo, visión de pantalla y personalidad:
+(Puedes usar cual API key de cualquier inteligencia artificial que gustes.)
 
 1. Consigue una API Key gratuita en [Google AI Studio](https://aistudio.google.com/app/apikey).
 2. Abre el archivo **`.env`** en la carpeta raíz del proyecto.
