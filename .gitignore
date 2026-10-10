@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.env
+.env
+.env.*
+!.env.example
+venv/
+.venv/
+env/
+
+# Electron / Node
+node_modules/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Tauri / Rust target builds
+src-tauri/target/
+**/target/
+
+# Builds & Binarios externos
+cloudflared.exe
+*.tmp
+temp/
+capturas/
+
+# Memoria personal local
+memoria_yize.json
+sonidos/*.mp3
+sonidos/*.wav

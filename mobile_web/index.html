@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Yize — Copiloto Móvil</title>
+
+  <!-- PWA Meta Tags -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#08070f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Yize">
+  <link rel="icon" type="image/png" href="/static/icon.png">
+  <link rel="apple-touch-icon" href="/static/icon.png">
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="ambient-glow"></div>
+
+  <!-- Barra Superior -->
+  <header class="app-header">
+    <div class="avatar-badge">
+      <div class="avatar-wrapper">
+        <img src="/static/icon.png" alt="Yize" class="avatar-img" id="headerAvatar">
+        <span class="online-dot" id="onlineDot"></span>
+      </div>
+      <div class="identity-info">
+        <div class="assistant-name">
+          <span>Yize</span>
+          <span class="emotion-tag" id="currentEmotionTag">[smug]</span>
+        </div>
+        <span class="assistant-role" id="connectionStatusLabel">Conectando...</span>
+      </div>
+    </div>
+
+    <div class="header-chips">
+      <div class="chip-status" id="headerCpuChip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+        <span id="statCpuVal">0%</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notificación Toast -->
+  <div class="toast-notice" id="toastNotice"></div>
+
+  <!-- Contenido Principal con Pestañas -->
+  <main class="app-content">
+
+    <!-- ─── PESTAÑA 1: CHAT & VOZ ─── -->
+    <section class="tab-pane active" id="tabChat">
+      <!-- Pensamiento en vivo de Yize -->
+      <div class="live-thought-card">
+        <div class="thought-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div class="thought-content">
+          <div class="thought-header">
+            <span class="thought-title">Mente en Directo</span>
+            <span class="thought-time">Ahora</span>
+          </div>
+          <div class="thought-text" id="liveThoughtText">Lista para tus órdenes desde el celular.</div>
+        </div>
+      </div>
+
+      <!-- Historial de Conversación -->
+      <div class="chat-container" id="chatContainer">
+        <div class="chat-bubble assistant">
+          <div class="bubble-meta">✦ Yize [smug]</div>
+          <div>¡Hola, amo! Puedes hablarme tocando el botón de micrófono abajo o escribirme lo que quieras hacer en tu PC.</div>
+        </div>
+      </div>
+
+      <!-- Selector de Salida de Audio (PC vs Celular) -->
+      <div class="audio-toggle-bar">
+        <span style="color:var(--text-dim);font-weight:600;">Voz:</span>
+        <div class="toggle-option active" id="optAudioPC">
+          <span>🔊 Altavoces PC</span>
+        </div>
+        <div class="toggle-option" id="optAudioMobile">
+          <span>📱 Este Celular</span>
+        </div>
+      </div>
+
+      <!-- Centro de Micrófono & Voz -->
+      <div class="voice-deck">
+        <div class="mic-stage">
+          <div class="mic-rings" id="micRings"></div>
+          <button class="btn-mic-main" id="btnMicMain" aria-label="Hablar a Yize">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+              <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+          </button>
+        </div>
+        <span class="voice-status-label" id="voiceStatusLabel">Toca el micrófono para dar una orden a Yize</span>
+      </div>
+
+      <!-- Chips de Comandos Rápidos -->
+      <div class="quick-chips-wrapper">
+        <button class="quick-chip" data-cmd="abre spotify">🎵 Spotify</button>
+        <button class="quick-chip" data-cmd="abre youtube">▶ YouTube</button>
+        <button class="quick-chip" data-cmd="captura de pantalla">📸 Captura</button>
+        <button class="quick-chip" data-cmd="qué hora es">⏰ Qué hora es</button>
+        <button class="quick-chip" data-cmd="sube el volumen">🔊 Subir volumen</button>
+        <button class="quick-chip" data-cmd="bloquea la pantalla">🔒 Bloquear PC</button>
+        <button class="quick-chip" data-cmd="minimiza todo">🖥 Escritorio</button>
+        <button class="quick-chip" data-cmd="abre league of legends">⚔️ Abrir LoL</button>
+      </div>
+
+      <!-- Barra de Texto -->
+      <div class="chat-input-row">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Escribe una orden para tu PC...">
+        <button class="btn-send" id="btnSendChat" aria-label="Enviar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- ─── PESTAÑA 2: DECK PC (CONTROL REMOTO) ─── -->
+    <section class="tab-pane" id="tabDeck">
+      <!-- Tarjeta Multimedia -->
+      <span class="section-title">Control Multimedia</span>
+      <div class="control-card">
+        <div class="media-btn-row">
+          <button class="ctrl-btn" data-action="prev_track">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+            <span>Anterior</span>
+          </button>
+          <button class="ctrl-btn primary" data-action="play_pause">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span>Play / Pausa</span>
+          </button>
+          <button class="ctrl-btn" data-action="next_track">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+            <span>Siguiente</span>
+          </button>
+        </div>
+        <div class="media-btn-row">
+          <button class="ctrl-btn" data-action="volume_down">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            <span>Volumen -</span>
+          </button>
+          <button class="ctrl-btn" data-action="mute">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/></svg>
+            <span>Silenciar</span>
+          </button>
+          <button class="ctrl-btn" data-action="volume_up">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            <span>Volumen +</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Apps & Juegos -->
+      <span class="section-title">Abrir en PC</span>
+      <div class="grid-apps">
+        <button class="app-btn" data-action="launch_app" data-param="spotify">
+          <span class="app-icon">🟢</span>
+          <span class="app-name">Spotify</span>
+        </button>
+        <button class="app-btn" data-action="launch_app" data-param="chrome">
+          <span class="app-icon">🌐</span>
+          <span class="app-name">Chrome</span>
+        </button>
+        <button class="app-btn" data-action="launch_app" data-param="steam">
+          <span class="app-icon">💨</span>
+          <span class="app-name">Steam</span>
+        </button>
+        <button class="app-btn" data-action="launch_app" data-param="lol">
+          <span class="app-icon">⚔️</span>
+          <span class="app-name">LoL</span>
+        </button>
+        <button class="app-btn" data-action="launch_app" data-param="fortnite">
+          <span class="app-icon">🎯</span>
+          <span class="app-name">Fortnite</span>
+        </button>
+        <button class="app-btn" data-action="launch_app" data-param="discord">
+          <span class="app-icon">💬</span>
+          <span class="app-name">Discord</span>
+        </button>
+        <button class="app-btn" data-action="launch_app" data-param="youtube">
+          <span class="app-icon">▶️</span>
+          <span class="app-name">YouTube</span>
+        </button>
+        <button class="app-btn" data-action="launch_app" data-param="whatsapp">
+          <span class="app-icon">📱</span>
+          <span class="app-name">WhatsApp</span>
+        </button>
+        <button class="app-btn" data-action="launch_app" data-param="bloc de notas">
+          <span class="app-icon">📝</span>
+          <span class="app-name">Notas</span>
+        </button>
+      </div>
+
+      <!-- Acciones de Sistema -->
+      <span class="section-title">Acciones del Sistema</span>
+      <div class="control-card">
+        <div class="media-btn-row">
+          <button class="ctrl-btn" data-action="screenshot">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span>Captura</span>
+          </button>
+          <button class="ctrl-btn" data-action="show_desktop">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <span>Escritorio</span>
+          </button>
+          <button class="ctrl-btn" data-action="lock_pc">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>Bloquear</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Teclado en Remoto -->
+      <span class="section-title">Escribir en la PC</span>
+      <div class="control-card">
+        <div class="input-send-row">
+          <input type="text" id="inputCustomText" placeholder="Texto para teclear en tu PC...">
+          <button class="btn-small" id="btnSendCustomText">Enviar</button>
+        </div>
+        <div class="media-btn-row" style="margin-top: 6px;">
+          <button class="ctrl-btn" data-action="press_key" data-param="enter">Enter</button>
+          <button class="ctrl-btn" data-action="press_key" data-param="esc">Escape</button>
+          <button class="ctrl-btn" data-action="press_key" data-param="space">Espacio</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── PESTAÑA 3: PANTALLA PC ─── -->
+    <section class="tab-pane" id="tabScreen">
+      <div class="screen-actions-bar">
+        <button class="quick-chip" id="btnRefreshScreen">🔄 Actualizar</button>
+        <div class="switch-wrapper">
+          <input type="checkbox" id="chkAutoRefresh">
+          <label for="chkAutoRefresh">Auto (3s)</label>
+        </div>
+        <button class="quick-chip" id="btnFullscreenScreen">⛶ Pantalla Completa</button>
+      </div>
+
+      <div class="screen-wrapper">
+        <img id="screenImg" class="screen-img" alt="Pantalla de tu PC" src="/api/screenshot">
+        <div class="screen-overlay-loading" id="screenLoading">Capturando pantalla...</div>
+      </div>
+    </section>
+
+    <!-- ─── PESTAÑA 4: ESTADO & AJUSTES ─── -->
+    <section class="tab-pane" id="tabSettings">
+      <span class="section-title">Hardware de tu PC</span>
+      <div class="status-grid">
+        <div class="stat-box">
+          <span class="stat-label">CPU</span>
+          <span class="stat-val" id="statCpuValCard">0%</span>
+          <div class="stat-progress"><div class="stat-bar" id="statCpuBar"></div></div>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">RAM</span>
+          <span class="stat-val" id="statRamVal">0%</span>
+          <div class="stat-progress"><div class="stat-bar" id="statRamBar"></div></div>
+        </div>
+      </div>
+
+      <div class="stat-box" style="margin-top: 6px;">
+        <span class="stat-label">Batería / Energía</span>
+        <span class="stat-val" id="statBatteryVal">--</span>
+      </div>
+
+      <span class="section-title">Ventana Activa en tu PC</span>
+      <div class="active-window-card">
+        <span class="stat-label">Aplicación en primer plano:</span>
+        <span class="window-title" id="activeWindowTitle">Detectando...</span>
+      </div>
+
+      <span class="section-title">Seguridad (Opcional)</span>
+      <div class="control-card">
+        <span class="stat-label">PIN de Acceso Móvil:</span>
+        <div class="input-send-row">
+          <input type="password" id="pinInput" placeholder="Sin PIN (acceso libre)">
+          <button class="btn-small" id="btnSavePin">Guardar</button>
+        </div>
+      </div>
+
+      <span class="section-title">Conectar Otro Celular</span>
+      <div class="qr-box">
+        <img src="/api/qrcode" alt="Código QR" class="qr-preview">
+        <span class="stat-label" style="text-align: center;">Escanea este código con cualquier cámara de teléfono en tu Wi-Fi</span>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Barra de Navegación Inferior -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="tabChat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <span>Chat & Voz</span>
+    </button>
+    <button class="nav-item" data-tab="tabDeck">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="7" width="20" height="15" rx="2" ry="2"/>
+        <polyline points="17 2 12 7 7 2"/>
+      </svg>
+      <span>Control PC</span>
+    </button>
+    <button class="nav-item" data-tab="tabScreen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+        <line x1="8" y1="21" x2="16" y2="21"/>
+        <line x1="12" y1="17" x2="12" y2="21"/>
+      </svg>
+      <span>Pantalla</span>
+    </button>
+    <button class="nav-item" data-tab="tabSettings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      <span>Ajustes</span>
+    </button>
+  </nav>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

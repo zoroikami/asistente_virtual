@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yize Overlay</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      background: transparent !important;
+      overflow: hidden;
+      user-select: none;
+    }
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      -webkit-app-region: drag;
+    }
+    canvas {
+      display: block;
+      background: transparent !important;
+      -webkit-app-region: drag;
+    }
+
+    /* Vista 100% limpia: Ocultar texto flotante, emojis y controles */
+    #speech-bubble,
+    #status-indicator,
+    #emotion-fx,
+    #controls {
+      display: none !important;
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div id="canvas-container">
+    <canvas id="vrm-canvas"></canvas>
+  </div>
+
+  <!-- Burbuja de diálogo -->
+  <div id="speech-bubble">
+    <div class="name-tag">✦ Yize</div>
+    <div id="bubble-text">Hola~ estoy aquí contigo 💜</div>
+  </div>
+
+  <!-- Indicador de estado -->
+  <div id="status-indicator">
+    <div id="status-dot"></div>
+    <span id="status-text">escuchando</span>
+  </div>
+
+  <!-- Emoji de emoción -->
+  <div id="emotion-fx">✨</div>
+
+  <!-- Botones de control -->
+  <div id="controls">
+    <button class="ctrl-btn" id="btn-hide" title="Ocultar/Mostrar">👁</button>
+    <button class="ctrl-btn" id="btn-wave" title="Saludar">👋</button>
+    <button class="ctrl-btn" id="btn-minimize" title="Minimizar">⬇</button>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "name": "yize-overlay",
+  "version": "0.1.0",
+  "description": "Yize VRM Desktop Overlay - Tauri v2",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "electron": "electron electron-main.cjs",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "electron": "^44.6.0",
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "@pixiv/three-vrm": "^3.1.3",
+    "@tauri-apps/api": "^2.0.0",
+    "three": "^0.169.0"
+  },
+  "allowScripts": {
+    "esbuild@0.21.5": true
+  }
+}
