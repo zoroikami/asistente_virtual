@@ -190,3 +190,87 @@ def is_vision_request(query: str) -> bool:
         "captura de pantalla", "screenshot",
     ]
     return any(trigger in query_lower for trigger in vision_triggers)
+
+
+def is_vision_guide_request(query: str) -> bool:
+    """Detecta si el usuario le pide a Yize localizar y señalar un elemento en pantalla."""
+    q = query.lower().strip()
+    triggers = [
+        "dónde está", "donde esta", "dónde queda", "donde queda",
+        "dónde se encuentra", "donde se encuentra", "encuentra el botón",
+        "encuentra la opción", "encuentra el menu", "busca el botón",
+        "busca la opción", "señala dónde", "señala donde", "señala el",
+        "apunta al", "apunta a la", "dónde está la opción", "donde esta la opcion"
+    ]
+    return any(t in q for t in triggers)
+
+
+def locate_element_on_screen(element_query: str) -> tuple[bool, str]:
+    """
+    Captura la pantalla, le pide a Gemini las coordenadas del elemento y
+    le envía al overlay Electron la orden de dibujar la diana holográfica en esas coordenadas.
+    """
+    import json
+    import re
+    from google.genai import types
+
+    if not _init_vision_client():
+        return False, "Necesito que configures tu GEMINI_API_KEY en .env para poder analizar la pantalla."
+
+    # Extraer el nombre del elemento limpiando prefijos
+    nombre_elem = element_query.lower()
+    for p in ["dónde está la opción", "donde esta la opcion", "dónde está el botón", "donde esta el boton",
+              "dónde está", "donde esta", "encuentra el botón", "encuentra la opción", "encuentra", "busca el", "busca la", "señala"]:
+        if nombre_elem.startswith(p):
+            nombre_elem = nombre_elem[len(p):].strip()
+            break
+    nombre_elem = nombre_elem.strip("?¿!¡ ").title() or "Elemento"
+
+    img_bytes, (orig_w, orig_h) = capture_screen_bytes()
+    if not img_bytes:
+        return False, "No pude capturar la pantalla del equipo."
+
+    prompt_text = (
+        f"Analiza esta captura de pantalla y localiza el elemento o botón: '{nombre_elem}'.\n"
+        "Devuelve ÚNICAMENTE un objeto JSON sin formato Markdown adicional con este esquema exacto:\n"
+        "{\"found\": true, \"box_2d\": [ymin, xmin, ymax, xmax], \"label\": \"nombre breve\"}\n"
+        "donde ymin, xmin, ymax, xmax son números enteros normalizados en escala de 0 a 1000.\n"
+        "Si el elemento no está visible en pantalla, responde exactamente: {\"found\": false}"
+    )
+
+    image_part = types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg")
+    text_part = types.Part.from_text(text=prompt_text)
+
+    for vm in VISION_FALLBACK_MODELS:
+        try:
+            resp = _vision_client.models.generate_content(
+                model=vm,
+                contents=[types.Content(role="user", parts=[text_part, image_part])]
+            )
+            if resp and resp.text:
+                raw = resp.text.strip()
+                # Extraer bloque JSON
+                match = re.search(r'\{.*\}', raw, re.DOTALL)
+                if match:
+                    data = json.loads(match.group(0))
+                    if data.get("found") and "box_2d" in data:
+                        ymin, xmin, ymax, xmax = data["box_2d"]
+                        center_x = int(((xmin + xmax) / 2) / 1000.0 * orig_w)
+                        center_y = int(((ymin + ymax) / 2) / 1000.0 * orig_h)
+                        label = data.get("label", nombre_elem)
+
+                        # Enviar coordenadas al overlay Electron
+                        try:
+                            from bridges.overlay_bridge import overlay_bridge
+                            overlay_bridge.send_screen_target(center_x, center_y, label, [xmin, ymin, xmax, ymax])
+                        except Exception as e:
+                            print(f"[Vision] Error enviando target a overlay: {e}")
+
+                        return True, f"Te acabo de señalar '{label}' en pantalla con el puntero holográfico. ¿Lo ves ahora o necesitas lentes?"
+                    else:
+                        return False, f"Revisé la pantalla, pero no veo '{nombre_elem}' abierto o visible en este momento."
+        except Exception as e:
+            print(f"[Vision] Falló localización con {vm}: {e}")
+            continue
+
+    return False, f"No logré ubicar '{nombre_elem}' con certeza en tu pantalla."

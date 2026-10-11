@@ -81,14 +81,21 @@ class VTubeStudioBridge:
             else:
                 print("⚠️ [VTS] Autorización pendiente o rechazada en VTube Studio.")
                 return False
-        except ConnectionRefusedError:
+        except (ConnectionRefusedError, asyncio.CancelledError):
+            self.is_connected = False
+            self.is_authenticated = False
+            return False
+        except RuntimeError as e:
+            if "interpreter shutdown" in str(e):
+                return False
             self.is_connected = False
             self.is_authenticated = False
             return False
         except Exception as e:
             self.is_connected = False
             self.is_authenticated = False
-            print(f"[VTS] Aviso de conexión: {e}")
+            if "interpreter shutdown" not in str(e):
+                print(f"[VTS] Aviso de conexión: {e}")
             return False
 
     async def _fetch_hotkeys(self):

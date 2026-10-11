@@ -25,18 +25,125 @@
       -webkit-app-region: drag;
     }
 
-    /* Vista 100% limpia: Ocultar texto flotante, emojis y controles */
+    /* Vista 100% limpia: Ocultar texto flotante, emojis y controles antiguos */
     #speech-bubble,
     #status-indicator,
     #emotion-fx,
     #controls {
       display: none !important;
     }
+
+    /* Indicador de Privacidad y Botón Mute */
+    .privacy-pill {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      background: rgba(18, 12, 34, 0.75);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      border-radius: 20px;
+      padding: 4px 8px 4px 10px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      z-index: 9999;
+      -webkit-app-region: no-drag;
+      cursor: default;
+      transition: all 0.25s ease;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    .privacy-pill:hover {
+      background: rgba(26, 17, 48, 0.9);
+      border-color: rgba(181, 95, 230, 0.4);
+    }
+    .privacy-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      transition: all 0.3s ease;
+    }
+    .privacy-dot.idle {
+      background: #6b7280;
+    }
+    .privacy-dot.mic {
+      background: #10b981;
+      box-shadow: 0 0 10px #10b981, 0 0 4px #10b981;
+      animation: pulseGreen 1.5s infinite;
+    }
+    .privacy-dot.cam {
+      background: #b55fe6;
+      box-shadow: 0 0 10px #b55fe6, 0 0 4px #b55fe6;
+      animation: pulsePurple 1.5s infinite;
+    }
+    .privacy-dot.vision {
+      background: #00f3ff;
+      box-shadow: 0 0 10px #00f3ff, 0 0 4px #00f3ff;
+      animation: pulseCyan 1.5s infinite;
+    }
+    .privacy-dot.muted {
+      background: #ef4444;
+      box-shadow: 0 0 10px #ef4444;
+    }
+    .privacy-label {
+      color: #e2e8f0;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      user-select: none;
+    }
+    .privacy-mute-btn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3px;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+    .privacy-mute-btn svg {
+      width: 13px;
+      height: 13px;
+    }
+    .privacy-mute-btn:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .privacy-mute-btn.active {
+      color: #ef4444;
+    }
+    @keyframes pulseGreen {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.15); }
+    }
+    @keyframes pulsePurple {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.15); }
+    }
+    @keyframes pulseCyan {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.15); }
+    }
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
+
+  <!-- Indicador de Privacidad y Botón Mute -->
+  <div id="privacy-pill" class="privacy-pill" title="Privacidad: Micrófono inactivo, Cámara apagada">
+    <div id="privacy-dot" class="privacy-dot idle"></div>
+    <span id="privacy-label" class="privacy-label">Standby</span>
+    <button id="privacy-mute-btn" class="privacy-mute-btn" title="Silencio Total / Modo Sigilo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+    </button>
+  </div>
 
   <div id="canvas-container">
     <canvas id="vrm-canvas"></canvas>

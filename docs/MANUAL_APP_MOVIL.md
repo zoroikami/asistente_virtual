@@ -6,24 +6,24 @@ Con esta aplicación puedes hablar con **Yize**, darle órdenes por voz o texto 
 
 ## 🚀 Cómo Iniciar la App Móvil
 
-Tienes dos formas sencillas de encenderla:
+Tienes tres formas sencillas de encenderla:
 
-### Método 1: Lanzador dedicado (Recomendado)
+### Método 1: Automático con Yize (Recomendado)
 Haz doble clic en:
-👉 `iniciar_servidor_movil.bat`
+👉 `Yize.exe`
+- Por defecto, `MOBILE_ENABLED=true` en `.env`, por lo que el supervisor arrancará el servidor móvil automáticamente junto con Yize y lo apagará limpiamente al salir.
 
-El script te preguntará cómo deseas conectarte:
-- **Opción [1] En casa (Misma red Wi-Fi):**
-  - Muestra un **Código QR en la pantalla de tu PC** y la URL local (ej. `http://192.168.1.6:8080`).
-  - Solo tienes que abrir la cámara de tu celular, apuntar a la pantalla y tocar el enlace.
-- **Opción [2] Fuera de casa (4G/5G con túnel seguro Cloudflare):**
-  - Descarga y activa automáticamente un enlace público seguro `https://xxxx.trycloudflare.com` con código QR.
-  - Te permite darle órdenes a tu PC desde cualquier lugar del mundo.
+### Método 2: Por Terminal con banderas
+Ejecuta en consola:
+- En casa (Wi-Fi local): `python main.py --con-movil`
+- Fuera de casa (Túnel seguro Cloudflare): `python main.py --con-movil --tunnel`
 
-### Método 2: Desde el menú principal de Yize
-Haz doble clic en:
-👉 `iniciar_yize.bat`
-- Selecciona la **Opción [3] Servidor Móvil** o la **Opción [4] Iniciar Todo** (Yize en PC + Servidor Móvil).
+### Método 3: Servidor Móvil Independiente (con QR en consola)
+Si solo quieres tener la app móvil encendida sin el modelo 3D:
+- En casa (Wi-Fi): `python mobile_server.py`
+- Fuera de casa (4G/5G con túnel): `python mobile_server.py --tunnel`
+
+Al iniciar, se mostrará en pantalla la URL (ej. `http://192.168.1.6:8080`) y un **Código QR interactivo** para escanear con la cámara de tu teléfono.
 
 ---
 

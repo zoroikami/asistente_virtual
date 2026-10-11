@@ -64,12 +64,10 @@ graph TD
 ```text
 asistente_virtual/
 │
-├── 🚀 Lanzadores y Puntos de Entrada
-│   ├── iniciar_yize.bat             # Lanzador maestro interactivo (PC + Móvil + 3D)
-│   ├── iniciar_servidor_movil.bat   # Lanzador directo para el celular (Wi-Fi o 4G/5G)
-│   ├── detener_asistente.bat        # Detiene procesos en segundo plano
-│   ├── main.py                      # Punto de entrada principal en la PC (Voz / Consola)
-│   └── mobile_server.py             # Servidor HTTP y WebSocket para el celular
+├── 🚀 Lanzador y Supervisor de Procesos
+│   ├── Yize.exe                     # Lanzador binario unificado (C# .NET)
+│   ├── main.py                      # Supervisor de procesos y ciclo de vida de Yize
+│   └── mobile_server.py             # Servidor HTTP y WebSocket para el celular (aiohttp)
 │
 ├── 🧠 core/                         # Núcleo de Inteligencia y Lógica del Sistema
 │   ├── __init__.py                  # Auto-resolución de paquetes y sys.path
@@ -79,7 +77,7 @@ asistente_virtual/
 │   ├── live_companion.py            # Observador en vivo (Riot Games LoL API, ventanas)
 │   ├── memory.py                    # Memoria persistente a largo plazo
 │   ├── vision.py                    # Análisis y captura de pantalla
-│   ├── voice.py                     # Motor de voz (Edge TTS y SpeechRecognition)
+│   ├── voice.py                     # Motor de voz (Edge TTS, Fish Audio y STT)
 │   └── config.py                    # Configuración, rutas y variables de entorno
 │
 ├── 🌐 bridges/                      # Puentes y Protocolos de Comunicación
@@ -101,18 +99,27 @@ asistente_virtual/
 │   ├── public/assets/Yize.vrm       # Modelo VRM 3D cargado
 │   └── src/                         # Animador de gestos, expresiones y socket
 │
-├── 💾 Carpetas de Recursos y Datos
-│   ├── assets/                      # Iconos, imágenes y recortes
-│   ├── models/                      # Modelos 3D (Yize.vrm) y modelos RVC
-│   ├── capturas/                    # Screenshots generados
-│   ├── sonidos/                     # Archivos de audio auxiliares
+├── 💾 data/                         # Memoria Persistente y Datos del Usuario
 │   ├── memoria_yize.json            # Base de recuerdos del usuario
 │   └── notas.txt                    # Notas rápidas de texto
 │
-└── 📖 Documentación y Configuración
-    ├── .env                         # API Keys privadas
-    ├── ARQUITECTURA.md              # Este documento
-    ├── MANUAL_APP_MOVIL.md          # Manual de la aplicación móvil
+├── 🛠️ tools/                        # Herramientas y Binarios Auxiliares
+│   ├── cloudflared.exe              # Túnel seguro para conexión móvil remota
+│   └── Launcher.cs                  # Código fuente en C# del lanzador Yize.exe
+│
+├── 📚 docs/                         # Documentación Técnica y Guías
+│   ├── ARQUITECTURA.md              # Este documento de arquitectura
+│   └── MANUAL_APP_MOVIL.md          # Manual de la aplicación móvil PWA
+│
+├── 🎨 Carpetas de Recursos
+│   ├── assets/                      # Iconos, imágenes y recortes
+│   ├── models/                      # Modelos 3D (Yize.vrm) y modelos RVC
+│   ├── capturas/                    # Screenshots generados
+│   └── sonidos/                     # Archivos de audio auxiliares
+│
+└── ⚙️ Configuración
+    ├── .env                         # API Keys y opciones activas
+    ├── .env.example                 # Plantilla de variables de entorno
     └── README.md                    # Descripción general del asistente
 ```
 

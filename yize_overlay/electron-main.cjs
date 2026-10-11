@@ -1,4 +1,4 @@
-const { app, BrowserWindow, screen, ipcMain } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, session, desktopCapturer } = require('electron');
 const path = require('path');
 
 let mainWindow;
@@ -110,10 +110,60 @@ function createWindow() {
     console.error(`[Renderer Load Fail] ${errorCode}: ${errorDescription}`);
   });
 
+  let cursorInterval = null;
+  let lastCursorPos = { x: 0, y: 0 };
+  let shakeFrames = 0;
+  let lastShakeTime = 0;
+
+  const startCursorTracker = () => {
+    if (cursorInterval) clearInterval(cursorInterval);
+    cursorInterval = setInterval(() => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      try {
+        const p = screen.getCursorScreenPoint();
+        const [winX, winY] = mainWindow.getPosition();
+        const [winW, winH] = mainWindow.getSize();
+
+        const dx = p.x - lastCursorPos.x;
+        const dy = p.y - lastCursorPos.y;
+        const dist = Math.hypot(dx, dy);
+        lastCursorPos = { x: p.x, y: p.y };
+
+        // Detección de agitación rápida del mouse (Mouse Shake Panic)
+        const now = Date.now();
+        if (dist > 75) {
+          shakeFrames++;
+          if (shakeFrames >= 6 && (now - lastShakeTime > 10000)) {
+            lastShakeTime = now;
+            shakeFrames = 0;
+            mainWindow.webContents.send('cursor-shake');
+          }
+        } else {
+          shakeFrames = Math.max(0, shakeFrames - 1);
+        }
+
+        // Posición normalizada para el LookAt 3D en toda la pantalla
+        const relX = p.x - winX;
+        const relY = p.y - winY;
+        mainWindow.webContents.send('global-cursor', {
+          screenX: p.x,
+          screenY: p.y,
+          relX,
+          relY,
+          normX: (relX / winW) * 2 - 1,
+          normY: -((relY / winH) * 2 - 1)
+        });
+      } catch (_) {}
+    }, 40);
+  };
+
+  startCursorTracker();
+
   const distPath = path.join(__dirname, 'dist', 'index.html');
   mainWindow.loadFile(distPath);
 
   mainWindow.on('closed', () => {
+    if (cursorInterval) clearInterval(cursorInterval);
     mainWindow = null;
   });
 }
@@ -140,7 +190,164 @@ ipcMain.on('window-hide', () => {
   }
 });
 
-app.whenReady().then(createWindow);
+let guideWindow = null;
+
+function showScreenGuide(targetX, targetY, label = 'Elemento') {
+  if (guideWindow && !guideWindow.isDestroyed()) {
+    try { guideWindow.close(); } catch (_) {}
+  }
+
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.bounds;
+
+  guideWindow = new BrowserWindow({
+    x: 0,
+    y: 0,
+    width,
+    height,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    hasShadow: false,
+    focusable: false,
+    resizable: false,
+    skipTaskbar: true,
+    backgroundColor: '#00000000',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+
+  guideWindow.setIgnoreMouseEvents(true, { forward: true });
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; overflow:hidden; }
+  body { width:100vw; height:100vh; background:transparent; position:relative; font-family:'Segoe UI', system-ui, sans-serif; }
+  .pointer-container {
+    position:absolute;
+    left:${targetX}px;
+    top:${targetY}px;
+    transform:translate(-50%, -50%);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    pointer-events:none;
+    animation:appear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .reticle {
+    width:84px; height:84px;
+    border:3px solid #b55fe6;
+    border-radius:50%;
+    box-shadow:0 0 30px #b55fe6, inset 0 0 20px #00f3ff;
+    position:relative;
+    animation:spinGlow 2.5s infinite linear;
+  }
+  .reticle::before {
+    content:'';
+    position:absolute;
+    top:-6px; left:50%; transform:translateX(-50%);
+    width:12px; height:12px;
+    background:#00f3ff;
+    border-radius:50%;
+    box-shadow:0 0 12px #00f3ff;
+  }
+  .reticle::after {
+    content:'';
+    position:absolute;
+    inset:14px;
+    border:2px dashed #00f3ff;
+    border-radius:50%;
+  }
+  .center-dot {
+    position:absolute;
+    top:50%; left:50%; transform:translate(-50%, -50%);
+    width:8px; height:8px;
+    background:#fff;
+    border-radius:50%;
+    box-shadow:0 0 10px #fff;
+  }
+  .arrow-down {
+    width: 0; 
+    height: 0; 
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 14px solid #00f3ff;
+    margin-top: -6px;
+    filter: drop-shadow(0 0 6px #00f3ff);
+    animation: bounce 1s infinite alternate ease-in-out;
+  }
+  .badge {
+    margin-top:8px;
+    background:rgba(15, 10, 28, 0.92);
+    border:1px solid #b55fe6;
+    box-shadow:0 6px 25px rgba(181, 95, 230, 0.6);
+    color:#fff;
+    padding:6px 14px;
+    border-radius:20px;
+    font-size:13px;
+    font-weight:bold;
+    letter-spacing:0.5px;
+    white-space:nowrap;
+  }
+  @keyframes spinGlow {
+    0% { transform:scale(0.96) rotate(0deg); }
+    50% { transform:scale(1.08) rotate(180deg); }
+    100% { transform:scale(0.96) rotate(360deg); }
+  }
+  @keyframes bounce {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(6px); }
+  }
+  @keyframes appear {
+    0% { opacity:0; transform:translate(-50%, -50%) scale(0.3); }
+    100% { opacity:1; transform:translate(-50%, -50%) scale(1); }
+  }
+</style>
+</head>
+<body>
+  <div class="pointer-container">
+    <div class="reticle">
+      <div class="center-dot"></div>
+    </div>
+    <div class="arrow-down"></div>
+    <div class="badge">🎯 ${label}</div>
+  </div>
+</body>
+</html>`;
+
+  guideWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+
+  setTimeout(() => {
+    if (guideWindow && !guideWindow.isDestroyed()) {
+      guideWindow.close();
+      guideWindow = null;
+    }
+  }, 6500);
+}
+
+ipcMain.on('show-screen-guide', (event, { x, y, label }) => {
+  showScreenGuide(x, y, label);
+});
+
+app.whenReady().then(() => {
+  if (session?.defaultSession?.setDisplayMediaRequestHandler) {
+    session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+      desktopCapturer.getSources({ types: ['screen'] })
+        .then((sources) => {
+          callback({ video: sources[0], audio: 'loopback' });
+        })
+        .catch((err) => {
+          console.error('[Electron] Error capturando audio loopback:', err);
+        });
+    });
+  }
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

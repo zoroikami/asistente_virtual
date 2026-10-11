@@ -9,7 +9,8 @@ from pathlib import Path
 from datetime import datetime
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-MEMORY_FILE = BASE_DIR / "memoria_yize.json"
+DATA_DIR = BASE_DIR / "data"
+MEMORY_FILE = (DATA_DIR / "memoria_yize.json") if (DATA_DIR / "memoria_yize.json").exists() else (BASE_DIR / "memoria_yize.json")
 
 DEFAULT_MEMORY = {
     "perfil_usuario": {
@@ -44,6 +45,7 @@ def _load_memory() -> dict:
 def _save_raw_memory(data: dict) -> bool:
     """Guarda los datos en el archivo JSON."""
     try:
+        MEMORY_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(MEMORY_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         return True

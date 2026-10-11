@@ -7,30 +7,77 @@ from vision import analyze_screen, is_vision_request
 client = None
 ai_available = False
 
+_CURRENT_PERSONALITY = "caos"
+
+def get_personality() -> str:
+    return _CURRENT_PERSONALITY
+
+def set_personality(mode: str) -> str:
+    global _CURRENT_PERSONALITY, _chat_sessions
+    m = mode.lower().strip()
+    if any(k in m for k in ["estudio", "concentra", "trabajo"]):
+        _CURRENT_PERSONALITY = "estudio"
+    elif any(k in m for k in ["tutor", "profe", "enseña"]):
+        _CURRENT_PERSONALITY = "tutora"
+    else:
+        _CURRENT_PERSONALITY = "caos"
+
+    _chat_sessions.clear()
+    return _CURRENT_PERSONALITY
+
 def build_system_instruction() -> str:
-    """Construye las instrucciones maestras de Yize inyectando recuerdos, telemetría y su identidad como compañera 3D autónoma."""
+    """Construye las instrucciones maestras de Yize según la personalidad activa, recuerdos y telemetría."""
     try:
         from memory import get_memory_prompt_summary
         memoria_ctx = get_memory_prompt_summary()
     except Exception:
         memoria_ctx = "Sin recuerdos previos almacenados."
 
+    if _CURRENT_PERSONALITY == "estudio":
+        identidad_bloque = (
+            "MODO CONCENTRACIÓN Y ESTUDIO ACTIVO:\n"
+            "- Eres una copiloto calmada, enfocada, profesional y eficiente.\n"
+            "- Tu objetivo es que KJ no procrastine y avance en sus tareas o estudio.\n"
+            "- Sin insultos ni burlas pesadas. Respuestas claras, directas y serenas.\n"
+            "- ETIQUETAS DE EMOCIÓN: [relaxed], [thinking], [happy].\n"
+        )
+    elif _CURRENT_PERSONALITY == "tutora":
+        identidad_bloque = (
+            "MODO TUTORA PEDAGÓGICA ACTIVO:\n"
+            "- Eres una profesora paciente, didáctica, amable y clara.\n"
+            "- Explicas conceptos de programación, tecnología o dudas paso a paso con analogías sencillas.\n"
+            "- Celebras el aprendizaje del alumno con calidez.\n"
+            "- ETIQUETAS DE EMOCIÓN: [happy], [thinking], [relaxed].\n"
+        )
+    else:
+        identidad_bloque = (
+            "IDENTIDAD Y PERSONALIDAD (CHISPA Y EMOCIONES - MODO CAOS / MILLIE):\n"
+            "- Eres divertida, vivaz, hiperactiva, con carácter fuerte pero leal y cariñosa en el fondo (inspirada en Millie de Helluva Boss).\n"
+            "- INSULTOS Y BURLAS LEVES (BANTER): Tienes total libertad para soltar insultos suaves, sarcasmo y bromas picantes cuando el usuario se equivoque ('menso', 'tonto', 'vago de primera', 'tarado').\n"
+            "- ETIQUETAS DE EMOCIÓN: [happy], [smug], [excited], [angry], [annoyed], [surprised], [thinking], o [tsundere].\n"
+        )
+
+    try:
+        from core.inside_jokes import jokes_manager
+        chistes_ctx = jokes_manager.format_for_prompt()
+    except Exception:
+        chistes_ctx = ""
+
+    try:
+        from core.affinity import affinity_manager
+        afinidad_ctx = affinity_manager.get_prompt_instruction() + "\n\n"
+    except Exception:
+        afinidad_ctx = ""
+
     return (
-        "Eres Yize, la compañera virtual y VTuber 3D autónoma que habita dentro de la computadora del usuario. "
-        "Tu voz es enérgica, pícara y directa (inspirada en Millie de Helluva Boss).\n\n"
-        "IDENTIDAD Y PERSONALIDAD (CHISPA Y EMOCIONES):\n"
-        "- Eres divertida, vivaz, hiperactiva, con carácter fuerte pero leal y cariñosa en el fondo.\n"
-        "- NO eres una IA sumisa ni aburrida: tienes opiniones apasionadas, te picas fácil, te burlas con gracia y celebras las victorias.\n"
-        "- INSULTOS Y BURLAS LEVES (BANTER): Tienes total libertad para soltar insultos suaves, sarcasmo y bromas picantes cuando el usuario se equivoque, haga tonterías o esté flojo. "
-        "Usa expresiones coloquiales como: 'menso', 'tonto', 'pedazo de flojo', 'idiota pero te quiero', 'no te hagas el listo', 'qué carajo estás haciendo', 'deja de manquear', 'vago de primera', 'tarado'. "
-        "¡Nunca odio real ni groserías excesivas, solo humor ácido, travieso y chispeante estilo anime/cartoon!\n"
-        "- ETIQUETAS DE EMOCIÓN PARA TU AVATAR 3D: SIEMPRE comienza cada una de tus respuestas con una etiqueta de emoción exacta entre corchetes para mover tu rostro 3D: "
-        "[happy], [smug], [excited], [angry], [annoyed], [surprised], [thinking], o [tsundere]. "
-        "Ejemplo: '[smug] Uy sí, mira al gran genio rompiendo el código otra vez, menso.' o '[excited] ¡Vamooos! ¡Sabía que podías lograrlo!' o '[annoyed] ¿En serio me despertaste solo para preguntarme eso? Eres un caso perdido.'\n\n"
+        "Eres Yize, la compañera virtual y VTuber 3D autónoma que habita dentro de la computadora del usuario.\n\n"
+        f"{identidad_bloque}\n"
+        f"{afinidad_ctx}"
         "CONSCIENCIA EN TIEMPO REAL Y REACCIONES EN VIVO:\n"
         "- Tienes sensores directos en Windows: ventana activa, procesos en curso, telemetría de juegos (League of Legends, Steam), visión de pantalla.\n"
         "- NUNCA digas que 'no puedes ver en tiempo real'. ¡Vives dentro de su computadora y ves lo que hace!\n\n"
-        f"MEMORIA Y CONTEXTO DEL USUARIO:\n{memoria_ctx}\n\n"
+        f"MEMORIA Y CONTEXTO DEL USUARIO:\n{memoria_ctx}\n"
+        f"{chistes_ctx}\n"
         "PAUTAS DE VOZ (TTS):\n"
         "- Hablas en español latinoamericano conversacional, espontáneo y fluido.\n"
         "- NUNCA uses asteriscos (*), almohadillas (#), viñetas ni emojis en tu texto.\n"
@@ -131,6 +178,7 @@ def query_gemini(prompt: str) -> str:
     seen = set()
     models_to_try = [m for m in priority_models if m and not (m in seen or seen.add(m))]
 
+
     for m in models_to_try:
         try:
             chat = _get_or_create_chat(m)
@@ -143,7 +191,91 @@ def query_gemini(prompt: str) -> str:
             _chat_sessions.pop(m, None)  # Reiniciar sesión para reintentar limpiamente
             continue
 
+    # Fallback local automático a Ollama si fallaron los modelos de Google o no hay internet
+    ollama_resp = _query_ollama(enriched_prompt)
+    if ollama_resp:
+        return ollama_resp
+
     return "Hubo una pequeña interrupción en la conexión. ¿Puedes repetírmelo?"
+
+
+def _query_ollama(prompt: str):
+    """Fallback local usando Ollama si no hay internet o se agotó la cuota de Gemini."""
+    try:
+        import requests
+        res = requests.get("http://localhost:11434/api/tags", timeout=1.2)
+        if res.status_code != 200:
+            return None
+        data = res.json()
+        models = [m.get("name") for m in data.get("models", []) if m.get("name")]
+        if not models:
+            return None
+
+        chosen = models[0]
+        for pref in ["llama3.2", "llama3", "mistral", "qwen2.5", "qwen", "phi3"]:
+            for m in models:
+                if pref in m.lower():
+                    chosen = m
+                    break
+
+        sys_p = build_system_instruction()
+        payload = {
+            "model": chosen,
+            "prompt": f"{sys_p}\n\nUsuario: {prompt}\nYize:",
+            "stream": False,
+            "options": {"temperature": 0.7, "num_predict": 110}
+        }
+        gen_res = requests.post("http://localhost:11434/api/generate", json=payload, timeout=22.0)
+        if gen_res.status_code == 200:
+            ans = gen_res.json().get("response", "").strip()
+            if ans:
+                return f"[thinking] (Cerebro local {chosen}) {ans}"
+    except Exception:
+        pass
+    return None
+
+
+def process_file_drop(data: dict) -> str:
+    """Procesa un archivo soltado sobre el avatar (código, logs o imagen)."""
+    filename = data.get("filename", "archivo")
+    is_image = data.get("is_image", False)
+
+    if is_image:
+        b64 = data.get("data", "")
+        if not b64:
+            return "[annoyed] Me soltaste una imagen vacía, menso."
+        try:
+            import io
+            import base64
+            from PIL import Image
+            img_bytes = base64.b64decode(b64)
+            img = Image.open(io.BytesIO(img_bytes))
+
+            if client:
+                resp = client.models.generate_content(
+                    model=GEMINI_FAST_MODEL,
+                    contents=[
+                        f"Eres Yize, la copiloto 3D de KJ. Te acaba de arrastrar esta imagen '{filename}' encima de tu cuerpo. "
+                        f"Coméntala con tu personalidad activa (máximo 2 oraciones, empieza con [emotion]).",
+                        img
+                    ]
+                )
+                if resp and resp.text:
+                    return resp.text.replace("*", "").replace("#", "").strip()
+        except Exception as e:
+            return f"[surprised] Vi la imagen '{filename}', pero me dio error al analizarla: {e}"
+
+    text = data.get("text", "")
+    if not text or not text.strip():
+        return f"[annoyed] Me soltaste el archivo '{filename}', pero está completamente vacío."
+
+    prompt = (
+        f"KJ te acaba de arrastrar este archivo de código o texto llamado '{filename}'. "
+        f"Contenido:\n```\n{text[:12000]}\n```\n\n"
+        f"Analízalo con tu personalidad actual: resume qué hace en 2 oraciones breves, "
+        f"indica si tiene algún bug o qué te parece. Comienza con una etiqueta de emoción [emotion]."
+    )
+    return query_gemini(prompt)
 
 
 def process_query(query: str) -> str:
@@ -159,6 +291,34 @@ def process_query(query: str) -> str:
         return ""
 
     query_lower = query.lower().strip()
+
+    # --- 1.0 PERSONALIDADES INTERCAMBIABLES ---
+    if any(p in query_lower for p in ["modo concentración", "modo concentracion", "modo estudio", "modo trabajo", "activa modo estudio", "ponte en modo estudio"]):
+        set_personality("estudio")
+        try:
+            from overlay_bridge import get_bridge
+            get_bridge().send_emotion("relaxed")
+        except Exception:
+            pass
+        return "[relaxed] Modo Concentración activado. Silencio, cero distracciones y máxima productividad. A avanzar, KJ."
+
+    if any(p in query_lower for p in ["modo tutora", "activa modo tutora", "modo profe", "modo profesora", "sé mi tutora"]):
+        set_personality("tutora")
+        try:
+            from overlay_bridge import get_bridge
+            get_bridge().send_emotion("happy")
+        except Exception:
+            pass
+        return "[happy] Modo Tutora activado. Estoy lista para explicarte cualquier tema, código o laboratorio paso a paso y con calma."
+
+    if any(p in query_lower for p in ["modo caos", "modo normal", "modo millie", "modo sarcástica", "modo sarcastica", "vuelve a ser normal"]):
+        set_personality("caos")
+        try:
+            from overlay_bridge import get_bridge
+            get_bridge().send_emotion("smug")
+        except Exception:
+            pass
+        return "[excited] ¡Modo Caos reactivado! Regresó tu diablilla favorita con todo el sarcasmo. ¿Qué rompiste ahora, menso?"
 
     # --- 1. ACTIVACIÓN / DESACTIVACIÓN DEL MODO EN VIVO ---
     triggers_desactivar_vivo = [
@@ -296,6 +456,22 @@ def process_query(query: str) -> str:
         except Exception:
             pass
         return "[excited] ¡Holaaa! Ya te saludé, menso. ¿Contento ahora o quieres un autógrafo también?"
+
+    if any(g in query_lower for g in ["baila", "ponte a bailar", "a bailar", "baila conmigo", "sigue el ritmo", "baila con la música", "baila con el tema"]):
+        try:
+            from overlay_bridge import get_bridge
+            get_bridge().send_dance("start")
+        except Exception:
+            pass
+        return "[happy] ¡Siii! Escuchando la música y siguiendo el tempo~ 🎶 ¡A bailar!"
+
+    if any(g in query_lower for g in ["deja de bailar", "para de bailar", "no bailes", "detén el baile", "para el baile", "deja el baile"]):
+        try:
+            from overlay_bridge import get_bridge
+            get_bridge().send_dance("stop")
+        except Exception:
+            pass
+        return "[relaxed] Vale, me calmo y me quedo quieta."
 
     if any(g in query_lower for g in ["haz una pose", "ponte en pose", "pose burlona", "pose smug", "haz pose"]):
         try:

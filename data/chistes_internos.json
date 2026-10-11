@@ -1,0 +1,47 @@
+[
+  {
+    "id": "joke_1",
+    "joke": "La vez que pasaste horas depurando código solo para darte cuenta de que no habías guardado el archivo.",
+    "tags": [
+      "codigo",
+      "programar",
+      "bug",
+      "error",
+      "guardar",
+      "python",
+      "javascript"
+    ],
+    "origin": "Clásico error de programador.",
+    "times_used": 0,
+    "created_at": "2026-10-10"
+  },
+  {
+    "id": "joke_2",
+    "joke": "Esa promesa solemne de 'una partidita más y me voy a dormir' a las 3:45 AM.",
+    "tags": [
+      "juego",
+      "dormir",
+      "lol",
+      "noche",
+      "desvelo",
+      "mañana"
+    ],
+    "origin": "Partidas infinitas de madrugada.",
+    "times_used": 0,
+    "created_at": "2026-10-10"
+  },
+  {
+    "id": "joke_3",
+    "joke": "Tu legendaria técnica de cerrar 40 pestañas de Chrome diciendo 'hoy ordeno mi vida'.",
+    "tags": [
+      "chrome",
+      "navegador",
+      "ram",
+      "pestañas",
+      "orden"
+    ],
+    "origin": "Exceso de pestañas abiertas.",
+    "times_used": 0,
+    "created_at": "2026-10-10"
+  }
+]

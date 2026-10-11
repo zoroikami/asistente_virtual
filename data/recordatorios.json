@@ -1,0 +1,22 @@
+[
+  {
+    "id": "rem_1791720994_0",
+    "task": "revisar tu postura",
+    "target_time": 1791722794.7784362,
+    "category": "postura",
+    "interval_seconds": 1800,
+    "stage": 3,
+    "last_alert_time": 1791723232.6814237,
+    "acknowledged": false
+  },
+  {
+    "id": "rem_1791725181_1",
+    "task": "tomar agua",
+    "target_time": 1791727881.6348512,
+    "category": "agua",
+    "interval_seconds": 2700,
+    "stage": 0,
+    "last_alert_time": 0.0,
+    "acknowledged": false
+  }
+]

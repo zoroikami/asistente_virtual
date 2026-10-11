@@ -37,6 +37,8 @@ class OverlayBridge:
         self._thread: Optional[threading.Thread] = None
         self._running = False
         self._audio_done_event = threading.Event()
+        self._last_shake_time = 0.0
+        self._last_poke_time = 0.0
 
     @classmethod
     def get(cls) -> "OverlayBridge":
@@ -58,6 +60,10 @@ class OverlayBridge:
                         self._audio_done_event.set()
                     elif msg_type == "poke":
                         self._handle_poke()
+                    elif msg_type == "command" and data.get("cmd") == "shake":
+                        self._handle_shake()
+                    elif msg_type == "file_drop":
+                        self._handle_file_drop(data)
                     elif self.command_callback:
                         self.command_callback(data)
                 except json.JSONDecodeError:
@@ -144,8 +150,12 @@ class OverlayBridge:
         self._send_sync({"type": "speech_end"})
 
     def send_listen_start(self):
-        """Empezó a escuchar."""
+        """Empezó a escuchar (activa animación de escucha activa)."""
         self._send_sync({"type": "listen_start"})
+
+    def send_listen_stop(self):
+        """Terminó de escuchar (detiene animación de escucha activa)."""
+        self._send_sync({"type": "listen_stop"})
 
     def send_emotion(self, emotion: str):
         """Cambiar expresión facial."""
@@ -159,8 +169,49 @@ class OverlayBridge:
         """Activa una pose o animación especial: 'bored', 'celebrate', 'yawn', 'sleepy', 'wave', 'poke'."""
         self._send_sync({"type": "set_pose", "pose": pose})
 
+    def send_dance(self, action: str = "toggle"):
+        """Activa o desactiva el baile rítmico sincronizado con la música ('start', 'stop', 'toggle')."""
+        self._send_sync({"type": "dance", "action": action})
+
+    def send_screen_target(self, x: int, y: int, label: str = "Elemento", box: list = None):
+        """Envía evento para dibujar una diana holográfica en pantalla en la coordenada x, y."""
+        self._send_sync({
+            "type": "show_screen_target",
+            "x": x,
+            "y": y,
+            "label": label,
+            "box": box or []
+        })
+
+    def send_idle_thought(self, text: str):
+        """Muestra una burbuja de pensamiento espontáneo en el overlay."""
+        self._send_sync({"type": "idle_thought", "text": text})
+
+    def send_wave(self):
+        """Envía saludo con la mano."""
+        self._send_sync({"type": "wave"})
+        self.send_pose("wave")
+
+    def send_window_dnd(self, active: bool):
+        """Activa o desactiva el modo No Molestar para minimizar o restaurar a Yize."""
+        self._send_sync({"type": "window_dnd", "active": active})
+
+    def send_command(self, cmd: str):
+        """Envía comando genérico al overlay."""
+        self._send_sync({"type": "command", "cmd": cmd})
+
+    def send(self, data: dict):
+        """Envía un diccionario JSON arbitrario al overlay."""
+        self._send_sync(data)
+
     def _handle_poke(self):
-        """Reacción espontánea hablada de Yize al recibir un clic (poke) en el modelo 3D."""
+        """Reacción espontánea hablada de Yize al recibir un clic (poke) en el modelo 3D (con cooldown)."""
+        import time
+        now = time.time()
+        if now - self._last_poke_time < 8.0:
+            return
+        self._last_poke_time = now
+
         import random
         frases = [
             "[annoyed] ¡Oye! ¿Quién te dio permiso para tocarme la cabeza, atrevido?",
@@ -180,6 +231,54 @@ class OverlayBridge:
             speak_async(frase)
         except Exception as e:
             logger.debug(f"Error procesando poke: {e}")
+
+    def _handle_shake(self):
+        """Reacción espontánea hablada de Yize al agitar rápidamente el mouse (con cooldown)."""
+        import time
+        now = time.time()
+        if now - self._last_shake_time < 12.0:
+            return
+        self._last_shake_time = now
+
+        import random
+        frases = [
+            "[surprised] ¡Oye! ¡Para de sacudir el mouse como un loco que me mareas!",
+            "[angry] ¡Cálmate con el ratón, bestia! ¿Te dio un ataque o qué te pasa?",
+            "[annoyed] ¿Qué haces agitando el puntero así? Casi me tiras de la pantalla, menso.",
+            "[tsundere] ¡Déjame tranquila! Ya vi que estás ahí, no hace falta que provoques un terremoto."
+        ]
+        frase = random.choice(frases)
+        try:
+            import sys
+            from pathlib import Path
+            core_dir = Path(__file__).resolve().parent.parent / "core"
+            if str(core_dir) not in sys.path:
+                sys.path.insert(0, str(core_dir))
+            from voice import speak_async
+            speak_async(frase)
+        except Exception as e:
+            logger.debug(f"Error procesando shake: {e}")
+
+    def _handle_file_drop(self, data: dict):
+        """Procesa un archivo soltado sobre el avatar (código, logs o imagen)."""
+        try:
+            import sys
+            import threading
+            from pathlib import Path
+            core_dir = Path(__file__).resolve().parent.parent / "core"
+            if str(core_dir) not in sys.path:
+                sys.path.insert(0, str(core_dir))
+            from brain import process_file_drop
+            from voice import speak_async
+
+            def _worker():
+                respuesta = process_file_drop(data)
+                if respuesta:
+                    speak_async(respuesta)
+
+            threading.Thread(target=_worker, daemon=True).start()
+        except Exception as e:
+            logger.debug(f"Error procesando file_drop: {e}")
 
     def on_command(self, callback: Callable):
         """Registrar callback para comandos del overlay."""
@@ -227,6 +326,8 @@ def start_bridge(auto_launch_overlay: bool = True):
 
 def get_bridge() -> OverlayBridge:
     return OverlayBridge.get()
+
+overlay_bridge = OverlayBridge.get()
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import webbrowser
 import datetime
@@ -124,12 +125,40 @@ def lanzar_juego_o_acceso_directo(cmd: str) -> tuple[bool, str]:
     return False, ""
 
 
+def lanzar_spotify() -> bool:
+    """Abre Spotify en Windows buscando el ejecutable real o usando el protocolo URI."""
+    appdata = os.environ.get("APPDATA", "")
+    spotify_exe = Path(appdata) / "Spotify" / "Spotify.exe"
+    if spotify_exe.exists():
+        try:
+            subprocess.Popen([str(spotify_exe)])
+            return True
+        except Exception:
+            pass
+    try:
+        os.system('start "" "spotify:"')
+        return True
+    except Exception:
+        pass
+    try:
+        webbrowser.open("https://open.spotify.com")
+        return True
+    except Exception:
+        return False
+
+
 def execute_system_command(command: str) -> tuple[bool, str]:
     """
     Intenta ejecutar comandos nativos del sistema en base a palabras clave.
     Retorna una tupla (ejecutado: bool, respuesta_verbal: str).
     """
     cmd = command.lower().strip()
+
+    try:
+        from diario import get_diario
+        get_diario().registrar_evento("orden_usuario", command)
+    except Exception:
+        pass
 
     # Si es una orden de creación o programación compleja, dejar que Gemini con herramientas lo resuelva
     if any(cmd.startswith(v) for v in ["crea un archivo", "crear archivo", "escribe un archivo", "escribe código", "haz un script", "genera un archivo"]):
@@ -209,6 +238,207 @@ def execute_system_command(command: str) -> tuple[bool, str]:
         pyautogui.press("prevtrack")
         return True, "[smug] Volviendo a la canción anterior."
 
+    # --- 4.1 BAILE Y RITMO MUSICAL ---
+    if any(p in cmd for p in ["baila", "ponte a bailar", "a bailar", "baila conmigo", "sigue el ritmo", "baila con la música", "baila con el tema"]):
+        try:
+            from overlay_bridge import get_bridge
+            get_bridge().send_dance("start")
+        except Exception:
+            pass
+        return True, "[happy] ¡Siii! Escuchando la música y siguiendo el tempo~ 🎶 ¡A bailar!"
+
+    if any(p in cmd for p in ["deja de bailar", "para de bailar", "no bailes", "detén el baile", "para el baile", "deja el baile"]):
+        try:
+            from overlay_bridge import get_bridge
+            get_bridge().send_dance("stop")
+        except Exception:
+            pass
+        return True, "[relaxed] Vale, me calmo y me quedo quieta."
+
+    # --- 4.2 MÚSICA Y CONTROL DE SPOTIFY ---
+    spotify_triggers = [
+        "pon algo para estudiar", "pon lofi", "pon lo-fi", "pon synthwave", "pon música de",
+        "pon musica de", "pon canciones de", "reproduce en spotify", "pon en spotify",
+        "pone en spotify", "pon música", "pon musica", "pone música", "pone musica",
+        "reproduce algo de", "pon una canción", "pon una cancion", "pone una canción",
+        "pone una cancion", "reproduce una canción", "reproduce una cancion",
+        "canción en spotify", "cancion en spotify", "música en spotify", "musica en spotify",
+        "pon canciones", "pone canciones", "ponme una canción", "ponme una cancion",
+        "pon temas de", "pone temas de", "reproduce a", "pon a"
+    ]
+    es_intencion_musica = any(t in cmd for t in spotify_triggers) or (
+        "spotify" in cmd and any(w in cmd for w in ["pon", "pone", "cancion", "canción", "musica", "música", "reproduce", "tema", "temas"])
+    ) or (
+        cmd.startswith("pon ") and any(k in cmd for k in ["rock", "chill", "anime", "gaming", "estudio", "concentracion"])
+    )
+
+    if es_intencion_musica:
+        try:
+            from core.spotify_client import spotify_ctl
+            res = spotify_ctl.play_preset_or_query(cmd)
+            # También activar baile si es música
+            try:
+                from overlay_bridge import get_bridge
+                get_bridge().send_dance("start")
+            except Exception:
+                pass
+            return True, f"[happy] {res}"
+        except Exception as e:
+            return True, f"[thinking] Intenté abrir la música pero ocurrió: {e}"
+
+    # --- 4.3 GUÍA VISUAL SOBRE LA PANTALLA (PUNTERO HOLOGRÁFICO) ---
+    try:
+        from vision import is_vision_guide_request, locate_element_on_screen
+        if is_vision_guide_request(cmd):
+            encontrado, msg = locate_element_on_screen(cmd)
+            return True, f"[{'happy' if encontrado else 'thinking'}] {msg}"
+    except Exception as e:
+        pass
+
+    # --- 4.4 GESTOS FRENTE A LA WEBCAM (LOCAL) Y PIEDRA PAPEL O TIJERA ---
+    if any(p in cmd for p in ["activa la cámara", "enciende la cámara", "prende la cámara", "activa la webcam", "activa los gestos", "activa gestos"]):
+        try:
+            from core.gestures import gesture_sentinel
+            ok, msg = gesture_sentinel.start()
+            return True, f"[{'happy' if ok else 'annoyed'}] {msg}"
+        except Exception as e:
+            return True, f"[angry] Error con la cámara: {e}"
+
+    if any(p in cmd for p in ["apaga la cámara", "desactiva la cámara", "apaga la webcam", "desactiva los gestos", "apaga gestos", "apaga los sensores"]):
+        try:
+            from core.gestures import gesture_sentinel
+            ok, msg = gesture_sentinel.stop()
+            return True, f"[relaxed] {msg}"
+        except Exception as e:
+            return True, f"[thinking] Error al apagar cámara: {e}"
+
+    if any(p in cmd for p in ["piedra papel o tijera", "piedra papel tijera", "juguemos piedra papel", "jugar piedra papel"]):
+        try:
+            from core.gestures import gesture_sentinel
+            msg = gesture_sentinel.start_rps_game()
+            return True, f"[smug] {msg}"
+        except Exception as e:
+            return True, f"[annoyed] Error iniciando juego: {e}"
+
+    # --- 4.5 RECORDATORIOS CON ESCALADA DE SARCASMO Y HÁBITOS ---
+    try:
+        from core.reminders import reminder_manager
+
+        # Hábitos saludables
+        if any(p in cmd for p in ["recuérdame tomar agua", "recordatorio de agua", "avísame de tomar agua", "tomar agua cada"]):
+            res = reminder_manager.add_habit("agua", 45)
+            return True, f"[happy] {res}"
+
+        if any(p in cmd for p in ["recuérdame la postura", "revisa mi postura", "recordatorio de postura", "postura cada"]):
+            res = reminder_manager.add_habit("postura", 30)
+            return True, f"[happy] {res}"
+
+        if any(p in cmd for p in ["pausa para los ojos", "descanso de ojos", "recordatorio de ojos", "pausa de ojos"]):
+            res = reminder_manager.add_habit("ojos", 20)
+            return True, f"[happy] {res}"
+
+        # Cumplimiento / Confirmación
+        if any(p in cmd for p in ["ya lo hice", "ya lo cumplí", "ya lo termine", "ya terminé", "recordatorio listo", "listo el recordatorio", "ya tomé agua", "ya me senté bien"]):
+            res = reminder_manager.acknowledge()
+            return True, f"[happy] {res}"
+
+        # Cancelar recordatorios
+        if any(p in cmd for p in ["cancela los recordatorios", "cancelar recordatorios", "borra los recordatorios", "eliminar recordatorios"]):
+            res = reminder_manager.cancel_all()
+            return True, f"[relaxed] {res}"
+
+        # Listar recordatorios
+        if any(p in cmd for p in ["qué recordatorios tengo", "que recordatorios tengo", "cuáles son mis recordatorios", "mis recordatorios"]):
+            res = reminder_manager.list_active()
+            return True, f"[thinking] {res}"
+
+        # Recordatorio puntual con tiempo
+        m_rem = re.search(r'(?:recu[eé]rdame|av[ií]same)\s+en\s+(\d+(?:\.\d+)?)\s*(minutos?|mins?|segundos?|segs?|horas?|hs?)?(?:\s+(?:que|para|de)?\s*(.*))?', cmd, re.IGNORECASE)
+        if m_rem:
+            num = float(m_rem.group(1))
+            unit = (m_rem.group(2) or "minutos").lower()
+            task = (m_rem.group(3) or "hacer lo que tenías pendiente").strip()
+            if "hora" in unit or "h" in unit:
+                sec = num * 3600
+            elif "seg" in unit:
+                sec = num
+            else:
+                sec = num * 60
+            res = reminder_manager.add_reminder(task, sec)
+            return True, f"[happy] {res}"
+    except Exception as e:
+        pass
+
+    # --- 4.6 CHISTES INTERNOS Y ANÉCDOTAS RECURRENTES ---
+    try:
+        from core.inside_jokes import jokes_manager
+
+        if any(p in cmd for p in ["guarda ese chiste", "guarda este chiste", "anota este chiste", "recuerda este chiste"]):
+            chiste_txt = cmd
+            for pre in ["guarda ese chiste:", "guarda este chiste:", "anota este chiste:", "guarda ese chiste", "guarda este chiste", "anota este chiste"]:
+                if chiste_txt.startswith(pre):
+                    chiste_txt = chiste_txt[len(pre):].strip()
+                    break
+            chiste_txt = chiste_txt or "Un momento gracioso no detallado."
+            res = jokes_manager.add_joke(chiste_txt)
+            return True, f"[smug] {res}"
+
+        if any(p in cmd for p in ["cuéntame un chiste interno", "cuentame un chiste interno", "dime un chiste interno", "dime una anécdota", "recuerdas cuando"]):
+            j = jokes_manager.get_random_joke()
+            if j:
+                return True, f"[smug] ¿Cómo olvidar esto? {j}"
+            return True, "[thinking] Todavía no tenemos suficientes chistes internos registrados. Dame más material cómico."
+    except Exception as e:
+        pass
+
+    # --- 4.7 BUENOS DÍAS PERSONALIZADO (CLIMA DE SANTIAGO Y DIARIO) ---
+    if any(p in cmd for p in ["buenos días", "buenos dias", "dime el briefing", "resumen de la mañana", "cómo empieza el día", "briefing matutino"]):
+        try:
+            from core.briefing import get_morning_briefing
+            res = get_morning_briefing()
+            return True, res
+        except Exception as e:
+            return True, f"[thinking] Error en briefing: {e}"
+
+    # --- 4.8 JUEGOS Y NIVEL DE AFINIDAD ---
+    try:
+        from core.games import games_ctl
+        from core.affinity import affinity_manager
+
+        # Si hay una partida activa de trivia o tres en raya
+        if games_ctl.active_game == "trivia":
+            res_trivia = games_ctl.handle_trivia_answer(cmd)
+            if res_trivia:
+                return True, res_trivia
+
+        if games_ctl.active_game == "tateti":
+            res_tateti = games_ctl.handle_tateti_move(cmd)
+            if res_tateti:
+                return True, res_tateti
+
+        if any(p in cmd for p in ["juguemos trivia", "trivia", "jugar trivia", "pregunta de trivia"]):
+            return True, games_ctl.start_trivia()
+
+        if any(p in cmd for p in ["juguemos tres en raya", "tres en raya", "tateti", "jugar tateti", "ta te ti"]):
+            return True, games_ctl.start_tateti()
+
+        if any(p in cmd for p in ["nivel de afinidad", "cuánta afinidad", "cuanta afinidad", "cómo está nuestra relación", "cuánto me quieres", "estado de afinidad"]):
+            return True, affinity_manager.get_status_report()
+    except Exception as e:
+        pass
+
+    # --- 4.9 SISTEMA DE PLUGINS DINÁMICOS ---
+    try:
+        from core.plugin_manager import plugin_manager
+        if any(p in cmd for p in ["lista los plugins", "qué plugins tienes", "plugins activos"]):
+            return True, f"[happy] {plugin_manager.list_plugins()}"
+
+        plugin_handled, plugin_res = plugin_manager.dispatch(cmd)
+        if plugin_handled:
+            return True, plugin_res
+    except Exception as e:
+        pass
+
     # --- 5. CONTROL DE VENTANAS Y PANTALLA ---
     if any(p in cmd for p in ["bloquea la pantalla", "bloquear pantalla", "bloquear pc"]):
         ctypes.windll.user32.LockWorkStation()
@@ -245,9 +475,16 @@ def execute_system_command(command: str) -> tuple[bool, str]:
     if abierto_juego:
         return True, msg_juego
 
+    # Control explícito de abrir Spotify con ruta real
+    if any(cmd == t or cmd.startswith(t) for t in ["abre spotify", "abrir spotify", "inicia spotify", "iniciar spotify", "lanzar spotify"]) or cmd == "spotify":
+        ok = lanzar_spotify()
+        if ok:
+            return True, "[smug] Abriendo Spotify. A ver si pones música decente, menso."
+        else:
+            return True, "[angry] No pude encontrar Spotify instalado en tu equipo."
+
     # --- 6.1 ABRIR APLICACIONES POPULARES ---
     app_commands = {
-        ("abrir spotify", "abre spotify", "spotify"): ("spotify", "[smug] Abriendo Spotify. A ver si pones música decente, menso."),
         ("abrir calculadora", "abre la calculadora", "calculadora"): ("calc", "[thinking] Abriendo la calculadora. ¿Tan malo eres con las cuentas?"),
         ("abrir bloc de notas", "abre el bloc de notas", "bloc de notas", "notepad"): ("notepad", "[smug] Abriendo el Bloc de Notas. A ver qué notas raras vas a escribir."),
         ("abrir visual studio code", "abre visual studio code", "abre vs code", "abre code"): ("code", "[smug] Abriendo Visual Studio Code. A picar código, pedazo de hacker."),

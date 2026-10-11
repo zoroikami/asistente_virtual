@@ -580,11 +580,14 @@ def start_cloudflare_tunnel_if_requested(port: int, enable_tunnel: bool):
     if not enable_tunnel:
         return
 
-    cloudflared_path = ROOT_DIR / "cloudflared.exe"
+    tools_cloudflared = ROOT_DIR / "tools" / "cloudflared.exe"
+    cloudflared_path = tools_cloudflared if tools_cloudflared.exists() else (ROOT_DIR / "cloudflared.exe")
     if not cloudflared_path.exists():
         logger.info("⬇️ Descargando binario oficial portátil cloudflared.exe para acceso remoto...")
         import urllib.request
         try:
+            (ROOT_DIR / "tools").mkdir(parents=True, exist_ok=True)
+            cloudflared_path = tools_cloudflared
             url = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
             urllib.request.urlretrieve(url, cloudflared_path)
             logger.info("✅ cloudflared.exe descargado correctamente.")

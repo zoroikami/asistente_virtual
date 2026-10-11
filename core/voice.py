@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import asyncio
+import threading
 import tempfile
 from pathlib import Path
 import speech_recognition as sr
@@ -114,7 +115,7 @@ def _synthesize_fish_audio(text: str, output_path: str, voice_id: str, api_key: 
         }
         data = {
             "text": text,
-            "reference_id": voice_id.strip() if voice_id else "74d956ea95a54ce5814084787b09d9d8",
+            "reference_id": voice_id.strip() if voice_id else "47a44476780a4f33bba12e834ff1d461",
             "format": "mp3"
         }
         res = requests.post(url, json=data, headers=headers, timeout=12)
@@ -123,10 +124,11 @@ def _synthesize_fish_audio(text: str, output_path: str, voice_id: str, api_key: 
                 f.write(res.content)
             return True
         else:
-            print(f"[!] Fish Audio ({res.status_code}): {res.text[:120]}")
-            if res.status_code in [401, 402, 429]:
+            if res.status_code in [401, 402, 403, 429]:
                 _fish_audio_disabled = True
-                print("[!] API Key de Fish Audio no válida o sin créditos. Usando voz de respaldo.")
+                print(f"[Voz] Fish Audio ({res.status_code}): créditos agotados o API key no válida. Usando Edge-TTS neuronal.")
+            else:
+                print(f"[!] Fish Audio ({res.status_code}): {res.text[:80]}")
             return False
     except Exception as e:
         print(f"[!] Error de conexión con Fish Audio: {e}")
@@ -259,7 +261,21 @@ def speak(text: str):
         with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
             temp_filename = tmp.name
 
-        asyncio.run(_synthesize_edge_tts(text, temp_filename, EDGE_VOICE))
+        pitch = "+20Hz"
+        rate = "+14%"
+        try:
+            from brain import get_personality
+            p = get_personality()
+            if p == "estudio":
+                pitch = "-4Hz"
+                rate = "+0%"
+            elif p == "tutora":
+                pitch = "+4Hz"
+                rate = "-6%"
+        except Exception:
+            pass
+
+        asyncio.run(_synthesize_edge_tts(text, temp_filename, EDGE_VOICE, pitch=pitch, rate=rate))
         play_audio_file(temp_filename, text=clean_text, emotion=emotion)
 
         try:
@@ -305,67 +321,78 @@ def speak_async(text: str):
 class VoiceRecognizer:
     def __init__(self):
         self.recognizer = sr.Recognizer()
-        self.recognizer.energy_threshold = 450
+        self.recognizer.energy_threshold = 300
         self.recognizer.dynamic_energy_threshold = True
         self.recognizer.dynamic_energy_adjustment_damping = 0.15
         self.recognizer.dynamic_energy_ratio = 1.4
-        self.recognizer.pause_threshold = 0.5
+        self.recognizer.pause_threshold = 0.6
         self.recognizer.phrase_threshold = 0.2
         self.recognizer.non_speaking_duration = 0.4
         self.microphone = None
         self.has_microphone = False
+        self.device_name = "Desconocido"
 
-        # 1. Intentar el micrófono por defecto del sistema
+        mic_names = []
         try:
-            candidate = sr.Microphone()
-            with candidate as source:
-                pass
-            self.microphone = candidate
-            self.has_microphone = True
+            mic_names = sr.Microphone.list_microphone_names()
         except Exception:
-            self.microphone = None
+            pass
 
-        # 2. Si falló el micrófono por defecto, escanear dispositivos de entrada
-        if not self.has_microphone:
+        # 1. Si se configuró un índice específico en .env
+        env_idx = os.getenv("MIC_DEVICE_INDEX")
+        if env_idx is not None and env_idx.strip().isdigit():
+            idx = int(env_idx.strip())
             try:
-                import pyaudio
-                p = pyaudio.PyAudio()
-                input_indices = []
-                for i in range(p.get_device_count()):
-                    try:
-                        dev_info = p.get_device_info_by_index(i)
-                        if dev_info.get("maxInputChannels", 0) > 0:
-                            name = dev_info.get("name", "").lower()
-                            is_mic = any(k in name for k in ["mic", "micro", "headset", "auricular"])
-                            input_indices.append((0 if is_mic else 1, i))
-                    except Exception:
-                        pass
-                p.terminate()
+                candidate = sr.Microphone(device_index=idx)
+                with candidate as source:
+                    pass
+                self.microphone = candidate
+                self.has_microphone = True
+                self.device_name = mic_names[idx] if idx < len(mic_names) else f"Dispositivo #{idx}"
+            except Exception as e:
+                print(f"[!] Error abriendo micrófono configurado #{idx}: {e}")
 
-                input_indices.sort(key=lambda x: x[0])
-                for _, idx in input_indices:
+        # 2. Si no hay micrófono configurado, buscar dispositivos con nombre explícito de micrófono
+        if not self.has_microphone and mic_names:
+            for i, name in enumerate(mic_names):
+                n_low = name.lower()
+                if any(k in n_low for k in ["mic", "micro"]) and not any(k in n_low for k in ["mezcla", "stereo", "mapper", "line", "línea", "output"]):
                     try:
-                        candidate = sr.Microphone(device_index=idx)
+                        candidate = sr.Microphone(device_index=i)
                         with candidate as source:
                             pass
                         self.microphone = candidate
                         self.has_microphone = True
+                        self.device_name = name
                         break
                     except Exception:
                         continue
-            except Exception as e:
-                print(f"[!] Error buscando dispositivos de entrada: {e}")
+
+        # 3. Fallback al micrófono por defecto del sistema
+        if not self.has_microphone:
+            try:
+                candidate = sr.Microphone()
+                with candidate as source:
+                    pass
+                self.microphone = candidate
+                self.has_microphone = True
+                self.device_name = "Micrófono predeterminado de Windows"
+            except Exception:
+                self.microphone = None
 
         # Calibrar ruido ambiente inicial si hay micrófono disponible
         if self.has_microphone and self.microphone:
-            print("🎙️ Calibrando micrófono con el ruido ambiente... (un segundo)")
+            print(f"🎙️ Micrófono activo: {self.device_name}")
+            print("⏳ Calibrando micrófono con el ruido ambiente... (un segundo)")
             try:
                 with self.microphone as source:
                     self.recognizer.adjust_for_ambient_noise(source, duration=0.8)
-                # Limitar el umbral máximo para evitar ensordecer el micrófono
-                if self.recognizer.energy_threshold > 750:
-                    self.recognizer.energy_threshold = 550
-                print(f"✅ Micrófono calibrado y listo (umbral: {int(self.recognizer.energy_threshold)}).")
+                # Mantener umbral equilibrado (entre 120 y 380) para asegurar sensibilidad a voz normal
+                if self.recognizer.energy_threshold > 380:
+                    self.recognizer.energy_threshold = 280
+                elif self.recognizer.energy_threshold < 120:
+                    self.recognizer.energy_threshold = 150
+                print(f"✅ Micrófono listo y calibrado (umbral de escucha: {int(self.recognizer.energy_threshold)}).")
             except Exception as e:
                 print(f"[!] Advertencia al calibrar micrófono: {e}")
         else:
@@ -383,13 +410,19 @@ class VoiceRecognizer:
             return ""
 
         try:
+            try:
+                from overlay_bridge import get_bridge
+                get_bridge().send_listen_start()
+            except Exception:
+                pass
+
             with self.microphone as source:
                 audio = self.recognizer.listen(
                     source,
                     timeout=timeout,
                     phrase_time_limit=phrase_time_limit
                 )
-            
+
             # Reconocer texto mediante Google Speech Recognition (gratuito)
             texto = self.recognizer.recognize_google(audio, language=STT_LANGUAGE)
             return texto.strip().lower()
@@ -403,3 +436,14 @@ class VoiceRecognizer:
             return ""
         except Exception as e:
             return ""
+        finally:
+            try:
+                from overlay_bridge import get_bridge
+                get_bridge().send_listen_stop()
+            except Exception:
+                pass
+
+
+def play_thinking_filler():
+    """Desactivado a petición del usuario."""
+    pass
